@@ -21,7 +21,7 @@ underlying client core.
 from openfeature import api
 from featureflip_openfeature import FeatureflipProvider
 
-api.set_provider(FeatureflipProvider(sdk_key="your-server-sdk-key"))
+api.set_provider_and_wait(FeatureflipProvider(sdk_key="your-server-sdk-key"))
 
 client = api.get_client()
 
@@ -40,12 +40,17 @@ pass it in — the provider will not close a client it did not create:
 from featureflip import FeatureflipClient
 
 client = FeatureflipClient(sdk_key="your-server-sdk-key")
-api.set_provider(FeatureflipProvider(client=client))
+api.set_provider_and_wait(FeatureflipProvider(client=client))
 ```
 
 Note that `FeatureflipClient(...)` blocks on the initial flag fetch. With the
 `sdk_key` form the provider defers that to `initialize()`, so the wait happens
 inside OpenFeature's provider setup rather than in your constructor.
+
+Use `set_provider_and_wait`, not `set_provider`. The plain form runs the
+provider's `initialize()` on a background thread and returns immediately, so
+flags may not have loaded yet and the evaluations right after it can return
+your defaults. `set_provider_and_wait` blocks until initialization finishes.
 
 ## Context mapping
 

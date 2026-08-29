@@ -50,7 +50,9 @@ class FeatureflipProvider(AbstractProvider):
 
     Example:
         >>> from openfeature import api
-        >>> api.set_provider(FeatureflipProvider(sdk_key="sdk-xxx"))
+        >>> # set_provider_and_wait, not set_provider: the plain form runs
+        >>> # initialize() on a background thread and returns before flags load.
+        >>> api.set_provider_and_wait(FeatureflipProvider(sdk_key="sdk-xxx"))
         >>> client = api.get_client()
         >>> client.get_boolean_value("new-checkout", False)
         False

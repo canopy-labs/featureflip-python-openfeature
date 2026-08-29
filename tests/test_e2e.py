@@ -150,12 +150,31 @@ class TestAgainstTheRealSdk:
             provider.shutdown()
 
 
+def register(sdk_http, flags: list[FlagConfiguration]) -> None:
+    """Register through the API exactly as the README tells callers to.
+
+    `set_provider_and_wait`, NOT `set_provider`: the plain form runs the
+    provider's `initialize()` on a daemon thread and returns immediately, so a
+    test using it races the flag load and passes or fails on timing. These
+    tests previously pre-initialized the provider by hand and then called
+    `set_provider`, which is why the docs could recommend the racy call for a
+    whole release without any test noticing.
+    """
+    sdk_http.return_value.get_flags.return_value = (flags, [])
+    api.set_provider_and_wait(
+        FeatureflipProvider(
+            sdk_key="test-key", config=Config(streaming=False, send_events=False)
+        )
+    )
+
+
 class TestThroughTheOpenFeatureApi:
+    """Drives the documented registration path end to end."""
+
     def test_evaluation_through_the_public_client(self, sdk_http) -> None:
         """Proves the provider satisfies the abstract surface OpenFeature calls."""
-        provider = build_provider(sdk_http, [flag("checkout", True)])
+        register(sdk_http, [flag("checkout", True)])
         try:
-            api.set_provider(provider)
             client = api.get_client()
 
             assert client.get_boolean_value("checkout", False) is True
@@ -169,11 +188,49 @@ class TestThroughTheOpenFeatureApi:
         finally:
             api.clear_providers()
 
-    def test_default_is_returned_for_a_missing_flag(self, sdk_http) -> None:
-        provider = build_provider(sdk_http, [])
+    def test_flags_are_loaded_by_the_time_set_provider_and_wait_returns(
+        self, sdk_http
+    ) -> None:
+        """The regression guard for the racy quickstart shipped in 0.1.0.
+
+        Asserts on `error_code`, not just the value. Whether the *value* is
+        right under the plain `set_provider` is a coin flip — against these
+        fast mocks the daemon init thread usually wins, so a value-only
+        assertion passes most runs and would be a flaky guard rather than a
+        real one. An uninitialized provider deterministically reports
+        `PROVIDER_NOT_READY`, so that is what pins the contract.
+
+        No sleep and no retry: the statement immediately after registration
+        must already see a fully initialized provider.
+        """
+        register(sdk_http, [flag("checkout", True)])
         try:
-            api.set_provider(provider)
-            client = api.get_client()
-            assert client.get_string_value("nope", "fallback") == "fallback"
+            details = api.get_client().get_boolean_details("checkout", False)
+            assert details.error_code is None
+            assert details.value is True
+        finally:
+            api.clear_providers()
+
+    def test_string_and_object_flags_through_the_public_client(self, sdk_http) -> None:
+        register(sdk_http, [flag("theme", "dark")])
+        try:
+            assert api.get_client().get_string_value("theme", "light") == "dark"
+        finally:
+            api.clear_providers()
+
+    def test_type_mismatch_through_the_public_client(self, sdk_http) -> None:
+        """`bool` subclasses `int`, so this must NOT hand back 1."""
+        register(sdk_http, [flag("checkout", True)])
+        try:
+            details = api.get_client().get_integer_details("checkout", 0)
+            assert details.value == 0
+            assert details.error_code == ErrorCode.TYPE_MISMATCH
+        finally:
+            api.clear_providers()
+
+    def test_default_is_returned_for_a_missing_flag(self, sdk_http) -> None:
+        register(sdk_http, [])
+        try:
+            assert api.get_client().get_string_value("nope", "fallback") == "fallback"
         finally:
             api.clear_providers()

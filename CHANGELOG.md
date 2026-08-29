@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1 — 2026-08-29
+
+### Fixed
+
+- The README and docs quickstart called `api.set_provider(...)`, which runs the provider's `initialize()` on a background thread and returns immediately. Anyone following it verbatim raced the initial flag load, so the evaluations on the following lines could return their defaults instead of real values. Both now use `api.set_provider_and_wait(...)`, the Python equivalent of awaiting `setProviderAndWait` in Node, and the reason is stated inline so the racy form is not reintroduced. No provider code changed — only the guidance was wrong. (#2586)
+
+  The end-to-end tests now register through that documented path rather than pre-initializing the provider by hand and then calling `set_provider`, which is why the whole 0.1.0 cycle could recommend the racy call with a green suite. The new guard asserts on `error_code` rather than only the value: against fast test doubles the init thread usually wins the race, so a value-only assertion passes most runs and would be flaky rather than protective, while an uninitialized provider deterministically reports `PROVIDER_NOT_READY`.
+
 ## 0.1.0 — 2026-08-28
 
 Initial release of the OpenFeature provider for the Featureflip Python server SDK.
