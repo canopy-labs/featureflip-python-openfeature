@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "featureflip-openfeature-provider"
-version = "0.1.1"
+version = "0.2.0"
 description = "OpenFeature provider for Featureflip (Python server SDK)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -31,7 +31,7 @@ classifiers = [
 # The floor is 2.7.0 — the release that added `FeatureflipClient.on_update`,
 # without which this provider cannot emit PROVIDER_CONFIGURATION_CHANGED.
 dependencies = [
-    "featureflip>=2.7.0",
+    "featureflip>=2.8.0",
     "openfeature-sdk>=0.8.0",
 ]
 

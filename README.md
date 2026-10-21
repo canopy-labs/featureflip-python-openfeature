@@ -134,6 +134,10 @@ Requires `featureflip >= 2.7.0`, which added the underlying update hook.
 `TrackingEventDetails.attributes` become the event metadata, and a numeric
 `value` is included under the `value` key.
 
+Featureflip counts each event name, per environment. The metadata is
+transmitted with the event but is not stored, and event counts are not
+surfaced in the app or API.
+
 ## License
 
 Apache-2.0

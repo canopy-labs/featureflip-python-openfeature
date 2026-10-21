@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import threading
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _distribution_version
 from typing import TYPE_CHECKING, Any
 
 from featureflip import Config, FeatureflipClient
@@ -33,6 +36,17 @@ logger = logging.getLogger(__name__)
 
 #: Reported as the provider name via `get_metadata()`.
 PROVIDER_NAME = "featureflip-python"
+
+#: Sent after the SDK's own token in the User-Agent (#4153), so requests made
+#: through this provider can be counted apart from direct SDK use.
+WRAPPER_NAME = "featureflip-openfeature-python"
+
+try:
+    # Read from the installed distribution, which publish-openfeature-python.yml
+    # versions from the release tag, rather than a literal that could drift (#2141).
+    _WRAPPER_VERSION: str | None = _distribution_version("featureflip-openfeature-provider")
+except PackageNotFoundError:  # pragma: no cover - source tree without an install
+    _WRAPPER_VERSION = None
 
 
 class FeatureflipProvider(AbstractProvider):
@@ -107,7 +121,7 @@ class FeatureflipProvider(AbstractProvider):
         if self._client is None:
             # Blocks on the initial flag fetch, bounded by Config.init_timeout.
             self._client = FeatureflipClient(
-                sdk_key=self._sdk_key, config=self._config or Config()
+                sdk_key=self._sdk_key, config=self._identified(self._config or Config())
             )
 
         # Subscribed only after the client is ready, so the initial flag load is
@@ -117,6 +131,20 @@ class FeatureflipProvider(AbstractProvider):
         with self._subscription_lock:
             if self._unsubscribe is None:
                 self._unsubscribe = self._client.on_update(self._on_flags_changed)
+
+    @staticmethod
+    def _identified(config: Config) -> Config:
+        """A copy of ``config`` that names this provider as the SDK's wrapper.
+
+        A copy, so a Config the caller reuses for direct SDK clients is not
+        relabelled. A wrapper the caller already set is kept: the SDK carries one,
+        and theirs is the more specific. Only the sdk_key form gets here; a
+        caller-supplied client was built before the provider saw it, so its
+        requests carry no provider token.
+        """
+        if config.wrapper_name:
+            return config
+        return dataclasses.replace(config, wrapper_name=WRAPPER_NAME, wrapper_version=_WRAPPER_VERSION)
 
     def shutdown(self) -> None:
         """Unsubscribe, and close the client only if this provider created it."""

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-10-20
+
+### Added
+
+- Requests made through the provider now identify it: `User-Agent: featureflip-python/<version> featureflip-openfeature-python/<version>`, so Featureflip can count OpenFeature usage apart from direct SDK use. This applies when the provider builds its own client from an SDK key. A client you pass in was built before the provider saw it, so its requests are unchanged; the same is true if your `Config` already names a wrapper, which is kept. Requires `featureflip` 2.8.0 or later, which this release now depends on. (#4153)
+
 ## 0.1.1 — 2026-08-29
 
 ### Fixed
