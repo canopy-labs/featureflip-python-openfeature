@@ -74,6 +74,33 @@ def build_provider(sdk_http, flags: list[FlagConfiguration]) -> FeatureflipProvi
 
 
 class TestAgainstTheRealSdk:
+    def test_each_resolution_records_one_evaluation_event(self, sdk_http) -> None:
+        """A flag read only through the provider must still count (#4300).
+
+        The provider resolves through `variation_detail`, which recorded no event,
+        so every flag read this way looked never evaluated to analytics,
+        staleness and the archive guard.
+        """
+        from unittest.mock import MagicMock
+
+        provider = build_provider(sdk_http, [flag("enabled-flag", True)])
+        try:
+            assert provider._client is not None
+            processor = MagicMock()
+            provider._client._core._event_processor = processor
+            provider.resolve_boolean_details(
+                "enabled-flag", False, EvaluationContext(targeting_key="u1")
+            )
+            assert processor.queue_event.call_count == 1
+            event = processor.queue_event.call_args[0][0]
+            assert event["type"] == "Evaluation"
+            assert event["flagKey"] == "enabled-flag"
+            assert event["userId"] == "u1"
+            assert event["variation"] == "on"
+            assert event["reason"] == "fallthrough"
+        finally:
+            provider.shutdown()
+
     def test_initialize_builds_a_working_client(self, sdk_http) -> None:
         provider = build_provider(sdk_http, [flag("enabled-flag", True)])
         try:

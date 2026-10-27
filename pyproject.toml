@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "featureflip-openfeature-provider"
-version = "0.2.0"
+version = "0.2.1"
 description = "OpenFeature provider for Featureflip (Python server SDK)"
 readme = "README.md"
 license = "Apache-2.0"
@@ -28,10 +28,13 @@ classifiers = [
 # `featureflip` copy has to back both this provider and any direct SDK use, so
 # the process shares a single client core per SDK key.
 #
-# The floor is 2.7.0 — the release that added `FeatureflipClient.on_update`,
-# without which this provider cannot emit PROVIDER_CONFIGURATION_CHANGED.
+# The floor is 2.10.0 — the first release whose `variation_detail()` records an
+# evaluation event (#4300). The provider resolves every flag through it, so on an
+# older SDK its reads never reach analytics, staleness or the archive guard. 2.10.0
+# also carries what earlier floors required: `on_update` (2.7.0) and the wrapper
+# identity (2.8.0).
 dependencies = [
-    "featureflip>=2.8.0",
+    "featureflip>=2.10.0",
     "openfeature-sdk>=0.8.0",
 ]
 

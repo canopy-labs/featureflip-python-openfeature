@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-10-26
+
+### Fixed
+
+- Flag resolutions now count in Featureflip's flag analytics, stale-flag detection and archive guard. The provider resolves through the SDK's `variation_detail()`, which recorded no evaluation event; this release requires `featureflip` 2.10.0 or later, which fixes it (#4300).
+
 ## 0.2.0 — 2026-10-20
 
 ### Added

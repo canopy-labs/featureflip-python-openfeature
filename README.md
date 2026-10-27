@@ -60,8 +60,9 @@ your defaults. `set_provider_and_wait` blocks until initialization finishes.
 | Any other attribute | Passed through unchanged |
 
 An explicit `user_id` (or its alias `userId`) attribute takes precedence over
-`targeting_key`. Without either, percentage rollouts bucketed by user serve the
-control variation — see the SDK's keyless-context behavior.
+`targeting_key`. Without either, percentage rollouts bucketed by user skip that caller, who
+gets the next matching rule or the default variation. The SDK logs a
+warning once per flag and rule.
 
 ## Evaluation reasons
 
